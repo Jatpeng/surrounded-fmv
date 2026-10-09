@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>完蛋，我被她们包围了</title>
+<style>
+  :root {
+    --bg: #07060a;
+    --ink: #f6f1e7;
+    --muted: #b7ad9e;
+    --gold: #e4c27a;
+    --line: rgba(255,255,255,.14);
+    --glass: rgba(10,8,12,.72);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+  body { overflow: hidden; }
+  #app { position: relative; height: 100dvh; max-width: 520px; margin: 0 auto; background: #000; overflow: hidden; }
+  video, .poster {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000;
+  }
+  .shade {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,.05) 28%, rgba(0,0,0,.15) 52%, rgba(0,0,0,.82) 100%);
+  }
+  .top {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+    padding: calc(12px + env(safe-area-inset-top)) 14px 10px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .pill {
+    flex: 1; background: rgba(0,0,0,.45); border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 8px; font-size: 11px; letter-spacing: .04em; backdrop-filter: blur(8px);
+    display: flex; justify-content: space-between; align-items: center; gap: 6px;
+  }
+  .hearts { color: var(--gold); letter-spacing: 1px; }
+  .skip {
+    border: 1px solid var(--line); background: rgba(0,0,0,.45); color: var(--ink);
+    border-radius: 999px; padding: 6px 10px; font-size: 12px;
+  }
+  .panel {
+    position: absolute; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 4; display: flex; flex-direction: column; gap: 10px;
+  }
+  .dialogue {
+    background: var(--glass); border: 1px solid var(--line); border-radius: 18px;
+    padding: 14px 14px 12px; backdrop-filter: blur(16px);
+    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  }
+  .who { color: var(--gold); font-size: 13px; letter-spacing: .12em; margin-bottom: 6px; }
+  .line { font-size: 16px; line-height: 1.65; min-height: 3.2em; }
+  .choices { display: flex; flex-direction: column; gap: 8px; }
+  button.choice, button.primary, button.ghost {
+    border: 0; border-radius: 14px; padding: 13px 14px; text-align: left; font-size: 15px; line-height: 1.4;
+  }
+  button.choice { background: rgba(255,255,255,.94); color: #1b140d; }
+  button.choice small { display: block; color: #7a6a58; font-size: 12px; margin-top: 2px; }
+  button.primary { background: var(--gold); color: #1b140d; font-weight: 700; text-align: center; }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); text-align: center; }
+  .title-card {
+    position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.78));
+  }
+  .kicker { letter-spacing: .42em; font-size: 12px; color: var(--gold); }
+  h1 { font-size: 34px; line-height: 1.2; margin: 8px 0 6px; font-weight: 700; }
+  .sub { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 14px; }
+  .cast { display: flex; gap: 8px; margin-bottom: 14px; }
+  .cast figure { flex: 1; margin: 0; }
+  .cast img { width: 100%; height: 92px; object-fit: cover; border-radius: 12px; display: block; }
+  .cast figcaption { font-size: 11px; margin-top: 4px; color: #efe7da; }
+  input.name {
+    width: 100%; border-radius: 12px; border: 1px solid var(--line); background: rgba(0,0,0,.35);
+    color: white; padding: 12px; font-size: 15px; margin-bottom: 10px;
+  }
+  .end-badge {
+    display: inline-block; border: 1px solid var(--gold); color: var(--gold);
+    border-radius: 999px; padding: 4px 10px; font-size: 12px; letter-spacing: .16em; margin-bottom: 8px;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <video id="vid" playsinline webkit-playsinline muted autoplay></video>
+  <img id="poster" class="poster" alt="" />
+  <div class="shade"></div>
+  <div class="top" id="hud">
+    <div class="pill">晚宁 <span class="hearts" id="h-wan">♡♡</span></div>
+    <div class="pill">江糖 <span class="hearts" id="h-tang">♡♡</span></div>
+    <div class="pill">清禾 <span class="hearts" id="h-he">♡♡</span></div>
+    <button class="skip" id="skip">跳过</button>
+  </div>
+  <section class="title-card" id="title">
+    <div class="kicker">AI 互动影像 · 原创短篇</div>
+    <h1>完蛋，<br>我被她们包围了</h1>
+    <p class="sub">第一人称。三个晚上。三位完全不同的女人。选错一句，明天的电梯可能会很安静。</p>
+    <div class="cast">
+      <figure><img src="posters/elevator.jpg" alt="沈晚宁" /><figcaption>沈晚宁 · 对门</figcaption></figure>
+      <figure><img src="posters/cafe.jpg" alt="江糖" /><figcaption>江糖 · 咖啡馆</figcaption></figure>
+      <figure><img src="posters/rain.jpg" alt="顾清禾" /><figcaption>顾清禾 · 书店</figcaption></figure>
+    </div>
+    <input class="name" id="name" maxlength="8" placeholder="你的名字，默认陈屿" />
+    <button class="primary" id="start">进入云栖公寓</button>
+  </section>
+  <div class="panel hidden" id="panel">
+    <div class="dialogue">
+      <div class="who" id="who"></div>
+      <div class="line" id="line"></div>
+    </div>
+    <div class="choices" id="choices"></div>
+  </div>
+</div>
+<script>
+const vid = document.getElementById("vid");
+const poster = document.getElementById("poster");
+const title = document.getElementById("title");
+const panel = document.getElementById("panel");
+const whoEl = document.getElementById("who");
+const lineEl = document.getElementById("line");
+const choicesEl = document.getElementById("choices");
+const hud = document.getElementById("hud");
+
+const state = { wan: 0, tang: 0, he: 0, name: "陈屿", node: null, line: 0, ready: false };
+
+const hearts = n => "♥".repeat(Math.max(0, Math.min(2, n))) + "♡".repeat(Math.max(0, 2 - n));
+function paintHearts() {
+  document.getElementById("h-wan").textContent = hearts(state.wan);
+  document.getElementById("h-tang").textContent = hearts(state.tang);
+  document.getElementById("h-he").textContent = hearts(state.he);
+}
+function add(key, n) { state[key] = Math.max(0, Math.min(2, state[key] + n)); paintHearts(); }
+
+const scenes = {
+  elevator: {
+    video: "videos/elevator.mp4", poster: "posters/elevator.jpg",
+    speaker: "沈晚宁",
+    lines: ["电梯门开着。黑发女人抱着一只快散架的纸箱，看了你一眼。", "……进不进？箱子快掉了。你要是只打算看，就别挡门。"],
+    choices: [
+      { t: "伸手托住箱子", s: "好感 +2", fx: {wan:2}, next: "el_a" },
+      { t: "侧身让开：「你先。」", s: "不打扰", fx: {}, next: "el_b" },
+      { t: "「你也住这栋？」", s: "好感 +1", fx: {wan:1}, next: "el_c" }
+    ]
+  },
+  el_a: { video: "videos/elevator.mp4", poster: "posters/elevator.jpg", speaker: "沈晚宁",
+    lines: ["她把箱子往你这边送了半寸，耳尖却红了。", "「十六楼。对门。别记错，我可不想半夜听到你敲错门。」"],
+    next: "cafe" },
+  el_b: { video: "videos/elevator.mp4", poster: "posters/elevator.jpg", speaker: "沈晚宁",
+    lines: ["她点了下头，自己把箱子扛进电梯。", "门合上之前她说：「十六楼。路过的话，别踩到我的鞋。」"],
+    next: "cafe" },
+  el_c: { video: "videos/elevator.mp4", poster: "posters/elevator.jpg", speaker: "沈晚宁",
+    lines: ["「问这个的人，通常下一步就是问有没有男朋友。」", "她顿了顿，还是让出半边电梯。「先进来。雨会把你的箱子也淋坏。」"],
+    next: "cafe" },
+  cafe: { video: "videos/cafe.mp4", poster: "posters/cafe.jpg", speaker: "江糖",
+    lines: ["第二天中午，公寓楼下的糖罐咖啡。围裙上别着「店长」两个字。", "「新邻居？第一杯我请。别误会，开业活动。拉花是叶子，不是爱心，别想多。」"],
+    choices: [
+      { t: "收下，并认真夸这杯拉花", s: "好感 +2", fx: {tang:2}, next: "ca_a" },
+      { t: "坚持扫码付钱", s: "好感 +1", fx: {tang:1}, next: "ca_b" },
+      { t: "「我不喝咖啡。」", s: "空气安静了一秒", fx: {}, next: "ca_c" }
+    ]
+  },
+  ca_a: { video: "videos/end_jiang.mp4", poster: "posters/end_jiang.jpg", speaker: "江糖",
+    lines: ["她眼睛亮了一下，又马上把托盘竖起来挡脸。", "「行吧。那你明天还来。活动只到今天，人可以再到。」"],
+    next: "rain" },
+  ca_b: { video: "videos/cafe.mp4", poster: "posters/cafe.jpg", speaker: "江糖",
+    lines: ["「付钱也行。那我就不把你写进‘被请客名单’了。」", "她还是多给了一块小饼干。「邻居住对门那位，点单从不抬头。你比她好说话。」"],
+    next: "rain" },
+  ca_c: { video: "videos/cafe.mp4", poster: "posters/cafe.jpg", speaker: "江糖",
+    lines: ["「……那你走进咖啡店干什么。」", "她还是推来一杯热可可。「算了。新邻居豁免一次。下次想好再进门。」"],
+    next: "rain" },
+  rain: { video: "videos/rain.mp4", poster: "posters/rain.jpg", speaker: "顾清禾",
+    lines: ["晚上雨更大。书店橱窗下，女人把书扣在大衣里。", "「不用伞。书比我怕湿。……你是云栖新搬来的那位？电梯里那位提到过你。」"],
+    choices: [
+      { t: "把伞倾过去，盖住她和书", s: "好感 +2", fx: {he:2}, next: "ra_a" },
+      { t: "「你在看什么？」", s: "好感 +1", fx: {he:1}, next: "ra_b" },
+      { t: "点点头，匆匆回家", s: "擦肩而过", fx: {}, next: "ra_c" }
+    ]
+  },
+  ra_a: { video: "videos/end_gu.mp4", poster: "posters/end_gu.jpg", speaker: "顾清禾",
+    lines: ["她没有躲。雨水沿着伞骨滴到你的手腕上。", "「第十七页有一句写得很好。你若想听，天台的灯今晚修好了。」"],
+    next: "roof" },
+  ra_b: { video: "videos/rain.mp4", poster: "posters/rain.jpg", speaker: "顾清禾",
+    lines: ["「一本写选择的书。作者认为人只能选一条路。」", "她看了你一眼。「我不完全同意。天台灯亮了，你要是上去，也许能验证。」"],
+    next: "roof" },
+  ra_c: { video: "videos/end_alone.mp4", poster: "posters/end_alone.jpg", speaker: "旁白",
+    lines: ["你没回头。书店的灯在雨里缩成一小块。", "手机震了一下：公寓群，‘天台灯修好了’。你没点开。"],
+    next: "roof" },
+  roof: { video: "videos/rooftop.mp4", poster: "posters/rooftop.jpg", speaker: "旁白",
+    lines: ["天台的灯串是亮的。城市在栏杆外面呼吸。", "脚步声从楼梯口上来。不止一双。"],
+    choices: [
+      { t: "走向今晚最想见面的人", s: "按好感结算", fx: {}, next: "pick" },
+      { t: "「我只是来看灯。」", s: "全身而退", fx: {}, next: "end_alone" },
+      { t: "「我全都要。」", s: "危险选项", fx: {}, next: "end_all" }
+    ]
+  }
+};
+
+function endingFor() {
+  const ranks = [{k:"wan", n:state.wan, id:"end_shen"}, {k:"tang", n:state.tang, id:"end_jiang"}, {k:"he", n:state.he, id:"end_gu"}];
+  ranks.sort((a,b) => b.n - a.n);
+  if (ranks[0].n < 1) return "end_alone";
+  if (ranks[0].n === ranks[1].n && ranks[0].n >= 2) return "end_all";
+  return ranks[0].id;
+}
+
+const endings = {
+  end_shen: {
+    video: "videos/end_shen.mp4", poster: "posters/end_shen.jpg", speaker: "沈晚宁", badge: "结局 · 备用钥匙",
+    lines: ["其他人还在楼梯口。她先一步站到灯下，把一枚钥匙放进你掌心。", "「对门备用的。箱子我让人收了。别谢。明天还我——如果你还记得门牌。」"]
+  },
+  end_jiang: {
+    video: "videos/end_jiang.mp4", poster: "posters/end_jiang.jpg", speaker: "江糖", badge: "结局 · 不是开业活动",
+    lines: ["江糖把最后一杯端上天台，拉花这次真的是一颗很小的心。", "「店打烊了。这杯不算活动。你要是敢说不喝，我就把它倒进晚宁姐的鞋里。」"]
+  },
+  end_gu: {
+    video: "videos/end_gu.mp4", poster: "posters/end_gu.jpg", speaker: "顾清禾", badge: "结局 · 第十七页",
+    lines: ["顾清禾把书签夹进你指间。雨已经停了，她的肩还是湿的。", "「第十七页。读完再还我。还的时候，不要只还书。」"]
+  },
+  end_all: {
+    video: "videos/trio.mp4", poster: "posters/trio.jpg", speaker: "三人", badge: "结局 · 完蛋",
+    lines: ["门开的时候，三个人都在。沈晚宁先开口：「所以你群发的是同一句。」", "江糖：「哇。」顾清禾把书合上：「建议你现在乘电梯下楼，不要回头。完蛋了，你被包围了。」"]
+  },
+  end_alone: {
+    video: "videos/end_alone.mp4", poster: "posters/end_alone.jpg", speaker: "旁白", badge: "结局 · 箱子还在",
+    lines: ["天台没有人等你。或者你谁也没选。", "雨还在下。客厅里只剩那只箱子。手机安静了一整夜。"]
+  }
+};
+
+function playVideo(src, post, loop) {
+  poster.src = post;
+  poster.classList.remove("hidden");
+  vid.pause();
+  vid.loop = !!loop;
+  vid.src = src;
+  vid.currentTime = 0;
+  const p = vid.play();
+  if (p) p.catch(() => {});
+  vid.onplaying = () => poster.classList.add("hidden");
+}
+function showLine() {
+  const node = scenes[state.node] || endings[state.node];
+  const lines = node.lines;
+  whoEl.textContent = node.speaker;
+  lineEl.textContent = lines[state.line];
+  choicesEl.innerHTML = "";
+  if (state.line < lines.length - 1) {
+    const b = document.createElement("button");
+    b.className = "choice";
+    b.textContent = "继续";
+    b.onclick = () => { state.line++; showLine(); };
+    choicesEl.appendChild(b);
+    return;
+  }
+  if (node.choices) {
+    node.choices.forEach(c => {
+      const b = document.createElement("button");
+      b.className = "choice";
+      b.innerHTML = c.t + (c.s ? `<small>${c.s}</small>` : "");
+      b.onclick = () => choose(c);
+      choicesEl.appendChild(b);
+    });
+    return;
+  }
+  if (node.badge) {
+    const badge = document.createElement("div");
+    badge.className = "end-badge";
+    badge.textContent = node.badge;
+    choicesEl.appendChild(badge);
+    const again = document.createElement("button");
+    again.className = "primary";
+    again.textContent = "再活一个雨夜";
+    again.onclick = reset;
+    choicesEl.appendChild(again);
+    return;
+  }
+  const b = document.createElement("button");
+  b.className = "choice";
+  b.textContent = "前往下一幕";
+  b.onclick = () => go(node.next);
+  choicesEl.appendChild(b);
+}
+function choose(c) {
+  Object.entries(c.fx || {}).forEach(([k,v]) => add(k, v));
+  if (c.next === "pick") go(endingFor());
+  else go(c.next);
+}
+function go(id) {
+  state.node = id;
+  state.line = 0;
+  const node = scenes[id] || endings[id];
+  if (node.video) playVideo(node.video, node.poster);
+  panel.classList.remove("hidden");
+  showLine();
+}
+function reset() {
+  state.wan = state.tang = state.he = 0;
+  paintHearts();
+  panel.classList.add("hidden");
+  title.classList.remove("hidden");
+  playVideo("videos/intro.mp4", "posters/intro.jpg", true);
+}
+document.getElementById("start").onclick = () => {
+  const n = document.getElementById("name").value.trim();
+  state.name = n || "陈屿";
+  title.classList.add("hidden");
+  hud.classList.remove("hidden");
+  go("elevator");
+};
+document.getElementById("skip").onclick = () => {
+  if (vid && !vid.ended) { vid.currentTime = Math.max(0, (vid.duration || 5) - 0.05); }
+};
+vid.addEventListener("ended", () => poster.classList.remove("hidden"));
+paintHearts();
+playVideo("videos/intro.mp4", "posters/intro.jpg", true);
+</script>
+</body>
+</html>
